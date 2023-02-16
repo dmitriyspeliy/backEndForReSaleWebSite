@@ -1,12 +1,12 @@
 package ru.skypro.homework.mapper;
 
 
+import java.util.Collection;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import ru.skypro.homework.dto.RegisterReq;
 import ru.skypro.homework.dto.UserDTO;
 import ru.skypro.homework.entity.UserEntity;
-
-import java.util.Collection;
 
 /**
  * маппер для {@link UserEntity} готовый dto {@link UserDTO}
@@ -19,6 +19,9 @@ public interface UserMapper {
   @Mapping(target = "adEntities", ignore = true)
   @Mapping(target = "commentEntities", ignore = true)
   UserEntity toEntity(UserDTO userDto);
+  @Mapping(target = "role", source = "role")
+  @Mapping(target = "email", source = "username")
+  UserEntity toEntity(RegisterReq registerReq);
 
   @Mapping(target = "regDate", source = "regDate", dateFormat = "dd-MM-yyyy HH:mm:ss")
   UserDTO toDTO(UserEntity userEntity);

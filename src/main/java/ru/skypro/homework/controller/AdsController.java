@@ -17,6 +17,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +30,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import ru.skypro.homework.dto.*;
+import ru.skypro.homework.dto.AdsDTO;
+import ru.skypro.homework.dto.CommentDTO;
+import ru.skypro.homework.dto.CreateAds;
+import ru.skypro.homework.dto.FullAds;
+import ru.skypro.homework.dto.Properties;
 import ru.skypro.homework.service.AdsService;
 
 @RestController
@@ -74,17 +79,17 @@ public class AdsController {
       @ApiResponse(
           responseCode = "401",
           description = "Unauthorized",
-          content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       ),
       @ApiResponse(
           responseCode = "403",
           description = "Forbidden",
-          content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       ),
       @ApiResponse(
           responseCode = "404",
           description = "Not Found",
-          content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       )
   })
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -185,15 +190,15 @@ public class AdsController {
       @ApiResponse(
           responseCode = "200",
           description = "OK",
-              content = {
-                      @Content(
-                              schema = @Schema(implementation = CommentDTO.class))
-              }
+          content = {
+              @Content(
+                  schema = @Schema(implementation = CommentDTO.class))
+          }
       ),
       @ApiResponse(
           responseCode = "404",
           description = "Not Found",
-              content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       )
   })
   @GetMapping("/{ad_pk}/comments")
@@ -208,25 +213,25 @@ public class AdsController {
       @ApiResponse(
           responseCode = "200",
           description = "OK",
-              content = {
-                      @Content(
-                              schema = @Schema(implementation = CommentDTO.class))
-              }
+          content = {
+              @Content(
+                  schema = @Schema(implementation = CommentDTO.class))
+          }
       ),
       @ApiResponse(
           responseCode = "401",
           description = "Unauthorized",
-              content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       ),
       @ApiResponse(
           responseCode = "403",
           description = "Forbidden",
-              content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       ),
       @ApiResponse(
           responseCode = "404",
           description = "Not Found",
-              content = {@Content(array = @ArraySchema(schema =@Schema()))}
+          content = {@Content(array = @ArraySchema(schema = @Schema()))}
       )
   })
   @PostMapping("/{ad_pk}/comments")
@@ -270,7 +275,7 @@ public class AdsController {
           description = "OK",
           content = {
               @Content(
-                      array = @ArraySchema(schema = @Schema(implementation = FullAds.class)))
+                  array = @ArraySchema(schema = @Schema(implementation = FullAds.class)))
           }
       ),
       @ApiResponse(
@@ -291,7 +296,7 @@ public class AdsController {
           description = "OK",
           content = {
               @Content(
-                      array = @ArraySchema(schema = @Schema(implementation = AdsDTO.class)))
+                  array = @ArraySchema(schema = @Schema(implementation = AdsDTO.class)))
           }
       ),
       @ApiResponse(
@@ -312,6 +317,54 @@ public class AdsController {
       @PathVariable(name = "id") @NonNull @Parameter(description = "Больше 0, Например 1") Integer id,
       @RequestBody CreateAds CreateAds) {
     return ResponseEntity.ok().body(adsService.updateAds(id));
+  }
+
+  @Operation(summary = "Обновить объявление")
+  @ApiResponses({
+      @ApiResponse(
+          responseCode = "200",
+          description = "OK",
+          content = {
+              @Content(
+                  array = @ArraySchema(schema = @Schema(implementation = AdsDTO.class)))
+          }
+      ),
+      @ApiResponse(
+          responseCode = "401",
+          description = "Unauthorized"
+      ),
+      @ApiResponse(
+          responseCode = "403",
+          description = "Forbidden"
+      ),
+      @ApiResponse(
+          responseCode = "404",
+          description = "Not Found"
+      )
+  })
+//  @GetMapping("/me")
+//  public ResponseEntity<?> getAdsMe(
+//      @RequestParam(required = false) Boolean authenticated,
+//      @RequestParam(required = false) String authority,
+//      @RequestParam  Authentication authentication){
+////      @RequestBody Credential credentials,
+////      @RequestBody UserDetails details,
+////      @RequestBody Principal principal) {
+//////    return ResponseEntity.ok().body(adsService.updateAds(id));
+//    int q = 0;
+//    return null;
+//  }
+  @GetMapping("/me")
+  public ResponseEntity<?> getAdsMe(
+      @RequestParam(required = false) Boolean authenticated,
+      @RequestParam(required = false) String authority,
+      Authentication authentication) {
+//      @RequestBody Credential credentials,
+//      @RequestBody UserDetails details,
+//      @RequestBody Principal principal) {
+////    return ResponseEntity.ok().body(adsService.updateAds(id));
+    int q = 0;
+    return null;
   }
 
 

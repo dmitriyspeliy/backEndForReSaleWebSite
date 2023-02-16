@@ -1,14 +1,26 @@
 package ru.skypro.homework.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-import org.hibernate.Hibernate;
-
-import javax.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.OneToMany;
+import javax.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.experimental.FieldDefaults;
+import org.hibernate.Hibernate;
 
 /**
  * Сущность пользователя
@@ -46,7 +58,7 @@ public class UserEntity {
   /**
    * почта пользователя
    */
-  @Column(name = "email")
+  @Column(name = "username")
   String email;
 
   /**
@@ -72,6 +84,15 @@ public class UserEntity {
    */
   @Column(name = "image")
   String image;
+  @JsonIgnore
+  @Column(name = "password")
+  String password;
+  @JsonIgnore
+  @Column(name = "role")
+  String role;
+  @JsonIgnore
+  @Column(name = "enabled")
+  Boolean ENABLED;
 
   /**
    * Список объявлений пользователя
@@ -88,8 +109,12 @@ public class UserEntity {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) {
+      return false;
+    }
     UserEntity that = (UserEntity) o;
     return id != null && Objects.equals(id, that.id);
   }

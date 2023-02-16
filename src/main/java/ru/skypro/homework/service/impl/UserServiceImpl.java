@@ -12,28 +12,22 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Objects;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ru.skypro.homework.dto.NewPassword;
+import ru.skypro.homework.dto.RegisterReq;
+import ru.skypro.homework.dto.Role;
 import ru.skypro.homework.dto.UserDTO;
 import ru.skypro.homework.entity.UserEntity;
 import ru.skypro.homework.exception.ElemNotFound;
+import ru.skypro.homework.exception.ErrorRegistration;
 import ru.skypro.homework.loger.FormLogInfo;
 import ru.skypro.homework.mapper.UserMapper;
 import ru.skypro.homework.repository.UserRepository;
 import ru.skypro.homework.service.UserService;
-
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Base64;
-import java.util.Objects;
-
-import static java.nio.file.StandardOpenOption.CREATE_NEW;
 
 @Service
 @Slf4j
@@ -57,6 +51,18 @@ public class UserServiceImpl implements UserService {
     boolean authenticated = authentication.isAuthenticated();
     UserEntity userEntity = findEntityByEmail(nameEmail);
     return userMapper.toDTO(userEntity);
+  }
+
+  @Override
+  public UserDTO addUser(RegisterReq registerReq, Role role) {
+    try{
+      UserEntity userEntity = userMapper.toEntity(registerReq);
+      userEntity.setRegDate(LocalDateTime.now());
+      userRepository.save(userEntity);
+      return userMapper.toDTO(userEntity);
+    }catch (Exception e){
+      throw new ErrorRegistration("Ошибка при регистрации");
+    }
   }
 
   @Override
