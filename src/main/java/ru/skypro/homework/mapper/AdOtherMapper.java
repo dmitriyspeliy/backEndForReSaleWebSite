@@ -16,6 +16,8 @@ public interface AdOtherMapper {
 
     @Mapping(target = "authorFirstName", source = "author.firstName")
     @Mapping(target = "authorLastName", source = "author.lastName")
+    @Mapping(target = "phone", source = "author.phone")
+    @Mapping(target = "email", source = "author.email")
     @Mapping(target = "pk", source = "id")
     @Mapping(target = "image", source = "imageEntities")
     FullAds toFullAdsDTO(AdEntity adEntity);

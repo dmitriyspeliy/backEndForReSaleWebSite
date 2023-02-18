@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import ru.skypro.homework.dto.AdsDTO;
+import ru.skypro.homework.dto.FullAds;
 import ru.skypro.homework.entity.AdEntity;
 import ru.skypro.homework.entity.ImageEntity;
 import ru.skypro.homework.entity.UserEntity;
@@ -39,6 +40,32 @@ class AdOtherMapperTest {
         exceptedDto.setImage(getImagePathString());
 
         assertEquals(exceptedDto, adOtherMapper.toAdsDTO(adEntity));
+    }
+
+    @Test
+    void toFullAds() {
+        AdEntity adEntity = new AdEntity();
+        adEntity.setId(1);
+        adEntity.setPrice(999);
+        adEntity.setTitle("Title");
+        adEntity.setDescription("Description");
+        adEntity.setCommentEntities(List.of());
+        adEntity.setAuthor(getAuthor());
+        adEntity.setImageEntities(getImageEntities());
+
+        FullAds exceptedDto = new FullAds();
+        exceptedDto.setPrice(999);
+        exceptedDto.setPk(1);
+        exceptedDto.setTitle("Title");
+        exceptedDto.setDescription("Description");
+        exceptedDto.setAuthorFirstName("Иван");
+        exceptedDto.setAuthorLastName("Иванов");
+        exceptedDto.setPhone("7884643");
+        exceptedDto.setEmail("asda@asd.re");
+
+        exceptedDto.setImage(getImagePathString());
+
+        assertEquals(exceptedDto, adOtherMapper.toFullAdsDTO(adEntity));
     }
 
     private UserEntity getAuthor() {
