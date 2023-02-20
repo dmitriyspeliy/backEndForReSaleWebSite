@@ -18,12 +18,12 @@ import lombok.experimental.FieldDefaults;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CommentDTO {
 
-  /**Id автора комментария */
-//  Integer id;
-  Integer author;
+  //Id автора комментария
+  int author;
+  //Дата создания комментария
   String createdAt;
-  Integer pk;
-  /**Текст комментария */
+  //Id объявления
+  int pk;
+  //Текст комментария
   String text;
-
 }

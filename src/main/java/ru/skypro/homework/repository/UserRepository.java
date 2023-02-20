@@ -5,9 +5,9 @@ import org.springframework.stereotype.Repository;
 import ru.skypro.homework.entity.UserEntity;
 
 @Repository
-public interface UserRepository extends JpaRepository<UserEntity, Integer> {
+public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
-  UserEntity findByEmail(String email);
+
 
 
 }
