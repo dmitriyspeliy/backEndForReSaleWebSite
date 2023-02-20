@@ -1,81 +1,81 @@
 package ru.skypro.homework.service;
 
-import java.util.Collection;
-import java.util.Map;
+import org.springframework.web.multipart.MultipartFile;
 import ru.skypro.homework.dto.AdsDTO;
 import ru.skypro.homework.dto.CommentDTO;
+import ru.skypro.homework.dto.CreateAds;
+import ru.skypro.homework.dto.Properties;
+
+import java.util.Collection;
+
 
 /**
  * Сервис объявлений
  */
 public interface AdsService {
-    /**
-     * Возвращает объявление
-     * @param id    - идентификатор объявления
-     * @return      - комментарий
-     */
-    AdsDTO getAds(int id);
-    /**
-     * Обновляет объявление
-     * @param id      - идентификатор объявления
-     * @return          - обнволенный комментарий
-     */
-    AdsDTO updateAds( int id);
-     /**Возвращает комментарий
-      @param adPk - идентификатор объявления
-     @param id    - идентификатор комментария
-     @return      - комментарий
-      */
-    CommentDTO getComments(String adPk, int id);
 
-    /**
-     * Удаляет комментарий
-     * @param adPk  - идентификатор объявления
-     * @param id    - идентификатор комментария
-     */
-    void deleteComments(String adPk, int id);
+  /**
+   * Возвращает объявление
+   *
+   * @param id - идентификатор объявления
+   * @return - комментарий
+   */
+  AdsDTO getAds(int id);
 
-    /**
-     * Обновляет комментарий
-     * @param adPk      - идентификатор объявления
-     * @param id        - идентификатор комментария
-     * @param commentDTO   - новый комментарий
-     * @return          - обнволенный комментарий
-     */
-    CommentDTO updateComments(String adPk, int id, CommentDTO commentDTO);
+  /**
+   * Обновляет объявление
+   *
+   * @param id - идентификатор объявления
+   * @return - обнволенный комментарий
+   */
+  AdsDTO updateAds(int id, CreateAds createAd);
 
-    void removeAds(int id);
+  /**
+   * Возвращает комментарий
+   *
+   * @param adPk - идентификатор объявления
+   * @param id   - идентификатор комментария
+   * @return - комментарий
+   */
+  CommentDTO getComments(String adPk, int id);
 
+  /**
+   * Удаляет комментарий
+   *
+   * @param adPk - идентификатор объявления
+   * @param id   - идентификатор комментария
+   */
+  void deleteComments(Integer adPk, Integer id);
 
-    Collection<CommentDTO> getAdsComments (Integer pk);
+  /**
+   * Обновляет комментарий
+   *
+   * @param adPk       - идентификатор объявления
+   * @param id         - идентификатор комментария
+   * @param commentDTO - новый комментарий
+   * @return - обнволенный комментарий
+   */
+  CommentDTO updateComments(int adPk, int id, CommentDTO commentDTO);
 
-
-    void addAdsComments (Integer pk);
-
-
-    void deleteAdsComment (Integer pk, Integer id);
-
-    /**
-     * Возвращает все объявления
-     *
-     * @return мапу где ключ по имени столбца в таблице каунт и резалт
-     */
-    Map<String, Object> getALLAds();
-
-    /**
-     * Добавляем новое объявление
-     *
-     * @return мапу где ключ по имени столбца в таблице каунт и резалт
-     */
-    AdsDTO addAds(AdsDTO adDto);
+  void removeAds(int id);
 
 
-    /**
-     * Возвращает объявления(е) по параметрам
-     *
-     * @return мапу где ключ по имени столбца в таблице каунт и резалт
-     */
-    Map<String, Object> getAdsMe(boolean authenticated, String authorities, Object credentials,
-        Object details,
-        Object principal);
+  Collection<CommentDTO> getAdsComments(Integer pk);
+
+
+  void addAdsComments(Integer pk);
+
+
+  /**
+   * @return все объявления
+   */
+  Collection<AdsDTO> getALLAds();
+
+  /**
+   * Добавляем новое объявление
+   *
+   * @return возвращает созданное объявление
+   */
+  AdsDTO addAds(Properties properties, MultipartFile multipartFile);
+
 }

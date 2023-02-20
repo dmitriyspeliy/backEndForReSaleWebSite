@@ -1,16 +1,14 @@
 package ru.skypro.homework.entity;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.ToString;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.hibernate.Hibernate;
+
+import javax.persistence.*;
+import java.util.List;
+import java.util.Objects;
 
 
 /**
@@ -22,16 +20,49 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
+@Table(name = "ads")
 @Entity
 public class AdEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
-  Long id;
-  String image;
-  int author;
-  int price;
-  int pk;
+  @Column(name = "id", nullable = false)
+  Integer id;
+
+  @ManyToOne(cascade = {CascadeType.ALL})
+  @JsonIgnore
+  @JoinColumn(name = "author_id")
+  UserEntity author;
+
+  @Column(name = "price")
+  Integer price;
+
+  @Column(name = "title")
   String title;
 
+  @Column(name = "description")
+  String description;
+
+  @OneToMany(mappedBy = "ad")
+  @JsonBackReference
+  @ToString.Exclude
+  List<CommentEntity> commentEntities;
+
+  @OneToMany(mappedBy = "ad")
+  @JsonBackReference
+  @ToString.Exclude
+  List<ImageEntity> imageEntities;
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+    AdEntity adEntity = (AdEntity) o;
+    return id != null && Objects.equals(id, adEntity.id);
+  }
+
+  @Override
+  public int hashCode() {
+    return getClass().hashCode();
+  }
 }
