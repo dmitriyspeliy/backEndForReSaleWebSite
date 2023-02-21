@@ -65,7 +65,7 @@ public class UserController {
           content = @Content(schema = @Schema())
       )
   })
-  @PostMapping(value = "/setPassword")
+  @PostMapping(value = "/set_password")
   public ResponseEntity<NewPassword> setPassword(
       @RequestBody
       @NotBlank(message = "newPassword не должен быть пустым") NewPassword newPassword) {
