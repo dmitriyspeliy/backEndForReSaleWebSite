@@ -18,15 +18,21 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import javax.transaction.Transactional;
-
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import ru.skypro.homework.dto.*;
+import ru.skypro.homework.dto.AdsDTO;
+import ru.skypro.homework.dto.CommentDTO;
+import ru.skypro.homework.dto.CreateAds;
+import ru.skypro.homework.dto.FullAds;
+import ru.skypro.homework.dto.ImageDTO;
+import ru.skypro.homework.dto.ResponseWrapperAds;
+import ru.skypro.homework.dto.ResponseWrapperComment;
+import ru.skypro.homework.dto.UserDTO;
 import ru.skypro.homework.entity.AdEntity;
 import ru.skypro.homework.entity.CommentEntity;
 import ru.skypro.homework.entity.ImageEntity;
@@ -93,19 +99,21 @@ public class AdsServiceImpl implements AdsService {
    */
   @Override
   public ResponseWrapperComment getAdsComments(Integer pk) {
-    Collection<CommentDTO> commentDTOS = commentMapper.toDTOList(commentRepository.findAllById(Collections.singleton(pk)));
+    Collection<CommentEntity> allAd = commentRepository.findAllById(Collections.singleton(pk));
+    Collection<CommentDTO> commentDTOS = commentMapper.toDTOList(allAd);
     int count = commentDTOS.size();
-    return new ResponseWrapperComment(count,commentDTOS);
+    return new ResponseWrapperComment(count, commentDTOS);
   }
 
   /**
    * Добавление коментария к объявлению
    *
-   * @param pk id объявления
+   * @param pk         id объявления
    * @param commentDTO коммент
    */
   @Override
-  public CommentDTO addAdsComments(Integer pk, CommentDTO commentDTO,Authentication authentication) {
+  public CommentDTO addAdsComments(Integer pk, CommentDTO commentDTO,
+      Authentication authentication) {
     log.info(FormLogInfo.getInfo());
     if (commentDTO == null || pk < 1) {
       throw new ElemNotFound();
@@ -114,14 +122,13 @@ public class AdsServiceImpl implements AdsService {
     CommentEntity comment = commentMapper.toEntity(commentDTO);
     comment.setAd(adEntity);
 
-
     UserDTO userDTO = userService.getUser(authentication);
     comment.setAuthor(userMapper.toEntity(userDTO));
-
+    comment.setCreatedAt(LocalDateTime.now());
 
     commentRepository.save(comment);
 
-    return commentDTO;
+    return commentMapper.toDTO(comment);
   }
 
   /**
@@ -147,7 +154,7 @@ public class AdsServiceImpl implements AdsService {
     log.info(FormLogInfo.getInfo());
     Collection<AdsDTO> adsAll = adMapper.toDTOList(adsRepository.findAll());
     int count = adsAll.size();
-    ResponseWrapperAds responseWrapperAds = new ResponseWrapperAds(count,adsAll);
+    ResponseWrapperAds responseWrapperAds = new ResponseWrapperAds(count, adsAll);
     return responseWrapperAds;
   }
 
@@ -164,8 +171,14 @@ public class AdsServiceImpl implements AdsService {
   public AdsDTO addAds(CreateAds createAds, MultipartFile multipartFile,
       Authentication authentication) throws IOException {
     log.info(FormLogInfo.getInfo());
+    if(createAds == null || multipartFile == null){
+      log.error(FormLogInfo.getException());
+      throw new IllegalArgumentException();
+    }
 
-    Path filePath = Path.of(imageAdsDir, getFileUniqueName() + "." + getExtension(multipartFile.getOriginalFilename()));
+    Path filePath = Path.of(imageAdsDir,
+        getFileUniqueName() + "." + getExtension(
+            Objects.requireNonNull(multipartFile.getOriginalFilename())));
     Files.createDirectories(filePath.getParent());
     Files.deleteIfExists(filePath);
 
@@ -237,6 +250,23 @@ public class AdsServiceImpl implements AdsService {
   }
 
   /**
+   * Получаем только свои объявления
+   *
+   * @param authentication данные о пользователе
+   * @return общий подсчет своих объявлений + объявления
+   */
+  @Override
+  public ResponseWrapperAds getAdsMe(Authentication authentication) {
+    log.info(FormLogInfo.getInfo());
+    UserDTO userDTO = userService.getUser(authentication);
+    Collection<AdsDTO> adsAll = adMapper.toDTOList(adsRepository.findAll());
+    Collection<AdsDTO> adsMe = adsAll.stream().
+        filter(x -> x.getAuthor().equals(userDTO.getId())).collect(Collectors.toList());
+    int count = adsMe.size();
+    return new ResponseWrapperAds(count, adsMe);
+  }
+
+  /**
    * вспомогательный медот для загрузки фотографий
    *
    * @return расширение файла
@@ -257,20 +287,21 @@ public class AdsServiceImpl implements AdsService {
 
   @Override
   public CommentDTO getComments(int adPk, int id) {
-    CommentEntity commentEntity = commentRepository.findByIdAndAd_Id(id, adPk).orElseThrow(ElemNotFound::new);
+    CommentEntity commentEntity = commentRepository.findByIdAndAd_Id(id, adPk)
+        .orElseThrow(ElemNotFound::new);
     return commentMapper.toDTO(commentEntity);
   }
 
   @Override
   public CommentDTO updateComments(int adPk, int id, CommentDTO commentDTO) {
-   CommentEntity commentEntity = commentRepository.findByIdAndAd_Id(id, adPk)
+    CommentEntity commentEntity = commentRepository.findByIdAndAd_Id(id, adPk)
         .orElseThrow(ElemNotFound::new);
 
-   UserEntity author = userRepository.findById(commentDTO.getAuthor())
-       .orElseThrow(ElemNotFound::new);
-   commentEntity.setAuthor(author);
+    UserEntity author = userRepository.findById(commentDTO.getAuthor())
+        .orElseThrow(ElemNotFound::new);
+    commentEntity.setAuthor(author);
 
-  commentEntity.setText(commentDTO.getText());
+    commentEntity.setText(commentDTO.getText());
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
     commentEntity.setCreatedAt(LocalDateTime.parse(commentDTO.getCreatedAt(), formatter));
