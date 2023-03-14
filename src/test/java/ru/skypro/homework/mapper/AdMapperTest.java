@@ -64,14 +64,9 @@ public class AdMapperTest {
     adsDTO.setTitle(getAdEntity().getTitle());
     adsDTO.setPrice(getAdEntity().getPrice());
     adsDTO.setAuthor(getAdEntity().getAuthor().getId());
-    adsDTO.setImage(getAdEntity().getImageEntities()
-        .stream()
-        .map(ImageEntity::getPath)
-        .collect(Collectors.toList()));
-
+    adsDTO.setImage(getAdEntity().getImageEntities().get(0).getPath());
     AdsDTO actual = adMapper.toDTO(getAdEntity());
     assertEquals(adsDTO, actual);
-
   }
 
   @Test
@@ -88,17 +83,19 @@ public class AdMapperTest {
     adEntity.setAuthor(userEntity);
 
     List<ImageEntity> imageEntities = new ArrayList<>();
-    for (String s : getAdsDTO().getImage()) {
-      ImageEntity imageEntity = new ImageEntity();
-      imageEntity.setPath(s);
-      imageEntities.add(imageEntity);
-    }
+//    for (String s : getAdsDTO().getImage()) {
+//      ImageEntity imageEntity = new ImageEntity();
+//      imageEntity.setPath(s);
+//      imageEntities.add(imageEntity);
+//    }
+    ImageEntity imageEntity = new ImageEntity();
+    imageEntity.setPath("/path/to/image/1");
+    imageEntities.add(imageEntity);
     adEntity.setImageEntities(imageEntities);
     adEntity.setCommentEntities(new ArrayList<>());
 
     AdEntity actual = adMapper.toEntity(getAdsDTO());
     assertEquals(adEntity, actual);
-
   }
 
   private AdEntity getAdEntity() {
@@ -108,8 +105,8 @@ public class AdMapperTest {
     ImageEntity imageEntity1 = new ImageEntity(2, "/path/to/image/2", new AdEntity());
     ImageEntity imageEntity2 = new ImageEntity(3, "/path/to/image/3", new AdEntity());
     imageEntities.add(imageEntity);
-    imageEntities.add(imageEntity1);
-    imageEntities.add(imageEntity2);
+//    imageEntities.add(imageEntity1);
+//    imageEntities.add(imageEntity2);
     adEntity.setId(1);
     adEntity.setTitle("afsdf");
     adEntity.setPrice(123);
@@ -121,18 +118,18 @@ public class AdMapperTest {
 
   private AdsDTO getAdsDTO() {
     AdsDTO adsDTO = new AdsDTO();
-    List<String> images = new ArrayList<>();
+//    List<String> images = new ArrayList<>();
     String images1 = "/path/to/image/1";
-    String images2 = "/path/to/image/2";
-    String images3 = "/path/to/image/3";
-    images.add(images1);
-    images.add(images2);
-    images.add(images3);
+//    String images2 = "/path/to/image/2";
+//    String images3 = "/path/to/image/3";
+//    images.add(images1);
+//    images.add(images2);
+//    images.add(images3);
     adsDTO.setPk(1);
     adsDTO.setTitle("afsdf");
     adsDTO.setPrice(123);
     adsDTO.setAuthor(1);
-    adsDTO.setImage(images);
+    adsDTO.setImage(images1);
     return adsDTO;
   }
 

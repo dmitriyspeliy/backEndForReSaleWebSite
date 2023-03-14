@@ -3,6 +3,8 @@ package ru.skypro.homework.mapper;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +31,18 @@ class CommentMapperTest {
 
         CommentDTO actual = commentMapper.toDTO(commentEntity);
         assertEquals(commentDTO, actual);
+    }
+
+    @Test
+    void toEntity() {
+        CommentDTO commentDTO = new CommentDTO( 1, "16-02-2023 14:30:22", 1, "Test text");
+        CommentEntity commentEntity = commentMapper.toEntity(commentDTO);
+        commentEntity.setAd(getAdEntity());
+        assertEquals(commentDTO.getAuthor(), commentEntity.getAuthor().getId());
+        assertEquals(commentDTO.getPk(), commentEntity.getAd().getId());
+        assertEquals(commentDTO.getText(), commentEntity.getText());
+        assertEquals(commentDTO.getCreatedAt(), commentEntity.getCreatedAt().format(DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss")));
+
     }
     private AdEntity getAdEntity() {
         AdEntity adEntity = new AdEntity();
