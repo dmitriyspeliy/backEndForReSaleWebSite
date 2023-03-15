@@ -2,6 +2,8 @@ package ru.skypro.homework.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Base64;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -17,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ru.skypro.homework.WebSecurityConfigTest;
@@ -26,6 +29,7 @@ import ru.skypro.homework.entity.CommentEntity;
 import ru.skypro.homework.entity.ImageEntity;
 import ru.skypro.homework.entity.UserEntity;
 import ru.skypro.homework.mapper.AdsOtherMapper;
+import ru.skypro.homework.mapper.ImageMapper;
 import ru.skypro.homework.repository.AdsRepository;
 import ru.skypro.homework.security.UserDetailServiceImpl;
 import ru.skypro.homework.service.AdsService;
@@ -37,6 +41,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -64,6 +69,8 @@ class AdsControllerTest2 {
     private AdsRepository adsRepository;
     @MockBean
     private AdsOtherMapper adsOtherMapper;
+    @MockBean
+    private ImageMapper imageMapper;
 
 
     @Test
@@ -78,30 +85,23 @@ class AdsControllerTest2 {
         Authentication auth = Mockito.mock(Authentication.class);
         MockMultipartFile image = new MockMultipartFile("image", "image.jpeg",
             MediaType.IMAGE_JPEG_VALUE, "image.jpeg".getBytes());
-        MockMultipartFile createAds = new MockMultipartFile("createAds", "createAds.json",
-            MediaType.APPLICATION_JSON_VALUE, "createAds.json".getBytes());
-        JSONObject createAdsJSON = new JSONObject();
-
-        createAdsJSON.put("pk", getAdsDTO().getPk());
-        createAdsJSON.put("author", getAdsDTO().getAuthor());
-        createAdsJSON.put("image", getAdsDTO().getImage());
-        createAdsJSON.put("price", getAdsDTO().getPrice());
-        createAdsJSON.put("title", getAdsDTO().getTitle());
-        when(adsService.addAds(getCreateAds(), image, auth)).thenReturn(getAdsDTO());
         String url = "/ads";
+        CreateAds createAds = getCreateAds();
+        JSONObject createAdsJSON =  new JSONObject();
+        createAdsJSON.put("description", createAds.getDescription());
+        createAdsJSON.put("price", createAds.getPrice());
+        createAdsJSON.put("title", createAds.getPrice());
+        when(adsService.addAds(getCreateAds(), image, auth)).thenReturn(getAdsDTO());
+
+        when(imageMapper.toEntity(any(ImageDTO.class))).thenReturn(getImageEntity());
+
         mockMvc.perform(multipart(url, HttpMethod.POST)
                 .file(image)
-                    .file(createAds)
-//                .content(String.valueOf(getCreateAds()))
-//                .accept(MediaType.APPLICATION_JSON))
-//                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
-                .accept(MediaType.MULTIPART_FORM_DATA_VALUE))
+                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
+                .content(String.valueOf(createAdsJSON))
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .accept(MediaType.APPLICATION_JSON))
             .andDo(print())
-//            .andExpect(jsonPath("$.pk").value(getAdsDTO().getPk()))
-//            .andExpect(jsonPath("$.price").value(getAdsDTO().getPrice()))
-//            .andExpect(jsonPath("$.title").value(getAdsDTO().getTitle()))
-//            .andExpect(jsonPath("$.image").value(getAdsDTO().getImage()))
-//            .andExpect(jsonPath("$.author").value(getAdsDTO().getAuthor()))
             .andExpect(status().isOk());
     }
     @Test
@@ -110,12 +110,19 @@ class AdsControllerTest2 {
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         Authentication auth = Mockito.mock(Authentication.class);
         CommentDTO commentDTO = getCommentDTO();
-        ObjectMapper objectMapper = null;
-
+        JSONObject commentDTOJSON =  new JSONObject();
+        commentDTOJSON.put("author", commentDTO.getAuthor());
+        commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
+        commentDTOJSON.put("pk", commentDTO.getPk());
+        commentDTOJSON.put("text", commentDTO.getText());
+        when(adsService.addAdsComments(1,commentDTO, auth)).thenReturn(commentDTO);
+        when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntity()));
         String url = "/ads/{ad_pk}/comments";
         mockMvc.perform(post(url, 1)
-                .contentType(MediaType.APPLICATION_JSON))
-            .andExpect((ResultMatcher) content().json(String.valueOf(commentDTO)))
+            .content(String.valueOf(commentDTOJSON))
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .accept(MediaType.APPLICATION_JSON))
+            .andDo(print())
             .andExpect(status().isOk());
     }
 
@@ -256,6 +263,26 @@ class AdsControllerTest2 {
         return new CreateAds("testDescription", 100, "testTitle");
     }
 
+    private AdEntity getAdEntity() {
+        AdEntity adEntity = new AdEntity();
+        adEntity.setId(3);
+        adEntity.setAuthor(getNewAuthor());
+        List<ImageEntity> imageEntityList = new ArrayList<>();
+        imageEntityList.add(new ImageEntity(1, "/ads/image/1", adEntity));
+        imageEntityList.add(new ImageEntity(2, "/ads/image/2", adEntity));
+        adEntity.setImageEntities(imageEntityList);
+        return adEntity;
+    }
+
+    private UserEntity getNewAuthor() {
+        UserEntity userEntity = new UserEntity();
+        userEntity.setId(1);
+        return userEntity;
+    }
+
+    private ImageEntity getImageEntity() {
+        return new ImageEntity(1, "path/to/image", getAdEntity());
+    }
 
 
 }
