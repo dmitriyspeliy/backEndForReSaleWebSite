@@ -91,16 +91,12 @@ class AdsControllerTest2 {
         createAdsJSON.put("description", createAds.getDescription());
         createAdsJSON.put("price", createAds.getPrice());
         createAdsJSON.put("title", createAds.getPrice());
+        MockMultipartFile json = new MockMultipartFile("createAds", "createAds",
+                MediaType.APPLICATION_JSON_VALUE, createAdsJSON.toString().getBytes());
         when(adsService.addAds(getCreateAds(), image, auth)).thenReturn(getAdsDTO());
-
-        when(imageMapper.toEntity(any(ImageDTO.class))).thenReturn(getImageEntity());
-
         mockMvc.perform(multipart(url, HttpMethod.POST)
                 .file(image)
-                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
-                .content(String.valueOf(createAdsJSON))
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .accept(MediaType.APPLICATION_JSON))
+                        .file(json))
             .andDo(print())
             .andExpect(status().isOk());
     }
