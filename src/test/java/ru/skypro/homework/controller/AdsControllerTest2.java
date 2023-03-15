@@ -1,5 +1,8 @@
 package ru.skypro.homework.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mockito;
@@ -7,10 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ru.skypro.homework.WebSecurityConfigTest;
@@ -32,8 +38,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdsController.class)
@@ -59,38 +69,73 @@ class AdsControllerTest2 {
     @Test
     public void contextLoads() {
         assertNotNull(adsController);
-        assertThat(adsController).isNotNull();
     }
 
     @Test
-    void createAds() {
+    @WithMockUser(value = "user@gmail.com")
+    void createAds() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        MockMultipartFile image = new MockMultipartFile("image", "image.jpeg",
+            MediaType.IMAGE_JPEG_VALUE, "image.jpeg".getBytes());
+        MockMultipartFile createAds = new MockMultipartFile("createAds", "createAds.json",
+            MediaType.APPLICATION_JSON_VALUE, "createAds.json".getBytes());
+        JSONObject createAdsJSON = new JSONObject();
+
+        createAdsJSON.put("pk", getAdsDTO().getPk());
+        createAdsJSON.put("author", getAdsDTO().getAuthor());
+        createAdsJSON.put("image", getAdsDTO().getImage());
+        createAdsJSON.put("price", getAdsDTO().getPrice());
+        createAdsJSON.put("title", getAdsDTO().getTitle());
+        when(adsService.addAds(getCreateAds(), image, auth)).thenReturn(getAdsDTO());
+        String url = "/ads";
+        mockMvc.perform(multipart(url, HttpMethod.POST)
+                .file(image)
+                    .file(createAds)
+//                .content(String.valueOf(getCreateAds()))
+//                .accept(MediaType.APPLICATION_JSON))
+//                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
+                .accept(MediaType.MULTIPART_FORM_DATA_VALUE))
+            .andDo(print())
+//            .andExpect(jsonPath("$.pk").value(getAdsDTO().getPk()))
+//            .andExpect(jsonPath("$.price").value(getAdsDTO().getPrice()))
+//            .andExpect(jsonPath("$.title").value(getAdsDTO().getTitle()))
+//            .andExpect(jsonPath("$.image").value(getAdsDTO().getImage()))
+//            .andExpect(jsonPath("$.author").value(getAdsDTO().getAuthor()))
+            .andExpect(status().isOk());
+    }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void addAdsComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        CommentDTO commentDTO = getCommentDTO();
+        ObjectMapper objectMapper = null;
+
+        String url = "/ads/{ad_pk}/comments";
+        mockMvc.perform(post(url, 1)
+                .contentType(MediaType.APPLICATION_JSON))
+            .andExpect((ResultMatcher) content().json(String.valueOf(commentDTO)))
+            .andExpect(status().isOk());
     }
 
-    @Test
-    void getComments() {
-    }
 
-    @Test
-    void deleteComments() {
-    }
-    @Test
-    void removeAds() {
-    }
-    @Test
-    void addAdsComments() {
-    }
 
-    @Test
-    void updateComments() {
-    }
-
-    @Test
-    void testGetAds() {
-    }
-
-    @Test
-    void updateAds() {
-    }
+//    @Test
+//    void deleteComments() {
+//    }
+//    @Test
+//    void removeAds() {
+//    }
+//
+//
+//    @Test
+//    void updateComments() {
+//    }
+//
+//    @Test
+//    void updateAds() {
+//    }
 
     @Test
     @WithMockUser(value = "user@gmail.com")
@@ -107,21 +152,10 @@ class AdsControllerTest2 {
 
     @Test
     @WithMockUser(value = "user@gmail.com")
-    void getAds() throws Exception {
+    void getAdsById() throws Exception {
         Authentication auth = Mockito.mock(Authentication.class);
-//        FullAds fullAds = new FullAds();
-//        fullAds.setPhone(getUserEntity().getPhone());
-//        fullAds.setPrice(getAdEntity().getPrice());
-//        fullAds.setDescription(getAdEntity().getDescription());
-//        fullAds.setImage(List.of(getImageEntity().getPath()));
-//        fullAds.setEmail(getUserEntity().getEmail());
-//        fullAds.setTitle(getAdEntity().getTitle());
-//        fullAds.setAuthorLastName(getUserEntity().getLastName());
-//        fullAds.setAuthorFirstName(getUserEntity().getFirstName());
-//        fullAds.setPk(getAdEntity().getId());
-//        when(adsOtherMapper.toFullAds(getAdEntity())).thenReturn(fullAds);
-        when(adsService.getAdById(1, auth)).thenReturn(getFullAds());
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getAdById(1, auth)).thenReturn(getFullAds());
         String url = "/ads/{id}";
         mockMvc.perform(get(url, 1)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -131,6 +165,23 @@ class AdsControllerTest2 {
     }
 
     @Test
+    @WithMockUser(value = "user@gmail.com")
+    void getAds() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getAds()).thenReturn(getResponseWrapperAds());
+        String url = "/ads";
+        mockMvc.perform(get(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+            .andDo(print())
+            .andExpect(status().isOk());
+    }
+
+
+
+    @Test
+    @WithMockUser(value = "user@gmail.com")
     void getAdsComments() throws Exception {
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         when(adsService.getAdsComments(1)).thenReturn(getResponseWrapperComment());
@@ -141,6 +192,19 @@ class AdsControllerTest2 {
                 .andDo(print())
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void getComments() throws Exception {
+        String url = "/ads/{ad_pk}/comments/{id}";
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getComments(1, 1)).thenReturn(getCommentDTO());
+        mockMvc.perform(get(url, 1, 1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+            .andDo(print())
+            .andExpect(status().isOk());
+    }
+
 
 //    private UserEntity getUserEntity () {
 //        return new UserEntity(1, "testName", "testLastName",
@@ -184,7 +248,12 @@ class AdsControllerTest2 {
     }
 
     private CommentDTO getCommentDTO() {
-        return new CommentDTO(1, LocalDateTime.of(2023, 03,01, 10, 00, 00).toString(), 1, "testText");
+        return new CommentDTO(1, LocalDateTime.of(2023, 03,01,
+            10, 00, 00).toString(), 1, "testText");
+    }
+
+    private CreateAds getCreateAds() {
+        return new CreateAds("testDescription", 100, "testTitle");
     }
 
 

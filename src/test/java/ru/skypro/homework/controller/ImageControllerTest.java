@@ -77,7 +77,7 @@ class ImageControllerTest {
     mockMvc.perform(multipart(HttpMethod.PATCH, "/ads/{id}/image", 1)
             .file(image)
             .with(user("user@gmail.com").password("password").roles("USER"))
-//            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
+            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
             .accept(MediaType.MULTIPART_FORM_DATA_VALUE))
         .andDo(print())
         .andExpect(status().isOk());
