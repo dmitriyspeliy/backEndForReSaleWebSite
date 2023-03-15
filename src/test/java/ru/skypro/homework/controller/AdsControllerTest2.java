@@ -19,6 +19,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultMatcher;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -44,9 +45,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -132,13 +131,41 @@ class AdsControllerTest2 {
 //    }
 //
 //
-//    @Test
-//    void updateComments() {
-//    }
-//
-//    @Test
-//    void updateAds() {
-//    }
+    @Test
+    void updateComments() {
+    }
+
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void updateAds() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{id}";
+
+        CommentDTO commentDTO = getCommentDTO();
+        JSONObject commentDTOJSON =  new JSONObject();
+        commentDTOJSON.put("author", commentDTO.getAuthor());
+        commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
+        commentDTOJSON.put("pk", commentDTO.getPk());
+        commentDTOJSON.put("text", commentDTO.getText());
+
+        when(adsRepository.findById(any())).thenReturn(Optional.of(getAdEntity()));
+
+        AdEntity resultAdEntity = getAdEntity();
+        resultAdEntity.setPrice(99);
+        resultAdEntity.setDescription("описание");
+        resultAdEntity.setTitle("заголовок");
+
+        when(adsRepository.save(resultAdEntity)).thenReturn(resultAdEntity);
+        when(adsService.updateAds(1, getCreateAds(), auth)).thenReturn(getAdsDTO());
+
+        mockMvc.perform(patch(url, 1)
+                        .content(commentDTOJSON.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk());
+    }
 
     @Test
     @WithMockUser(value = "user@gmail.com")
@@ -207,28 +234,6 @@ class AdsControllerTest2 {
             .andDo(print())
             .andExpect(status().isOk());
     }
-
-
-//    private UserEntity getUserEntity () {
-//        return new UserEntity(1, "testName", "testLastName",
-//                "email@mail.ru", "psswd", "+79998887766",
-//                LocalDateTime.of(2023, 03, 01, 10, 00, 00), "TestCity",
-//                "path/to/image", List.of(getAdEntity()), List.of(getCommentEntity()), Role.USER);
-//    }
-//
-//    private CommentEntity getCommentEntity() {
-//        return new CommentEntity(1, getUserEntity(), LocalDateTime.of(2023, 03,
-//                01, 10, 00, 00), getAdEntity(), "testText");
-//    }
-//
-//    private AdEntity getAdEntity() {
-//        return new AdEntity(1, getUserEntity(), 1000, "testTitle", "testDescription",
-//                List.of(getCommentEntity()), List.of(getImageEntity()));
-//    }
-//
-//    private ImageEntity getImageEntity() {
-//        return new ImageEntity(1, "path/to/image", getAdEntity());
-//    }
 
     private FullAds getFullAds() {
         return new FullAds("testName", "testLastName", "testDescription",
