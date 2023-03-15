@@ -1,9 +1,6 @@
 package ru.skypro.homework.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Base64;
 import net.minidev.json.JSONObject;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -18,9 +15,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultMatcher;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 import ru.skypro.homework.WebSecurityConfigTest;
@@ -29,10 +23,12 @@ import ru.skypro.homework.entity.AdEntity;
 import ru.skypro.homework.entity.CommentEntity;
 import ru.skypro.homework.entity.ImageEntity;
 import ru.skypro.homework.entity.UserEntity;
-import ru.skypro.homework.exception.ElemNotFound;
 import ru.skypro.homework.mapper.AdsOtherMapper;
+import ru.skypro.homework.mapper.CommentMapper;
 import ru.skypro.homework.mapper.ImageMapper;
 import ru.skypro.homework.repository.AdsRepository;
+import ru.skypro.homework.repository.CommentRepository;
+import ru.skypro.homework.repository.UserRepository;
 import ru.skypro.homework.security.UserDetailServiceImpl;
 import ru.skypro.homework.service.AdsService;
 
@@ -40,15 +36,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdsController.class)
@@ -71,6 +65,13 @@ class AdsControllerTest2 {
     private AdsOtherMapper adsOtherMapper;
     @MockBean
     private ImageMapper imageMapper;
+    @MockBean
+    private CommentRepository commentRepository;
+    @MockBean
+    private UserRepository userRepository;
+    @MockBean
+    private CommentMapper commentMapper;
+
 
 
     @Test
@@ -121,17 +122,38 @@ class AdsControllerTest2 {
             .andDo(print())
             .andExpect(status().isOk());
     }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void deleteComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{adPk}/comments/{id}";
+        AdEntity adEntity = getAdEntity();
+        CommentEntity commentEntity = getCommentEntity();
+        when(adsRepository.findById(1)).thenReturn(Optional.of(adEntity));
+        when(commentRepository.findById(1)).thenReturn(Optional.of(commentEntity));
+        doNothing().when(adsService).deleteComments(1,1, auth);
+        mockMvc.perform(delete(url, 1,1))
+            .andDo(print())
+            .andExpect(status().isOk());
+
+    }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void removeAds() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{id}";
+        AdEntity adEntity = getAdEntity();
+        when(adsRepository.findById(1)).thenReturn(Optional.of(adEntity));
+        doNothing().when(adsService).removeAds(1, auth);
+        mockMvc.perform(delete(url, 1))
+            .andDo(print())
+            .andExpect(status().isOk());
+
+    }
 
 
-
-//    @Test
-//    void deleteComments() {
-//    }
-//    @Test
-//    void removeAds() {
-//    }
-//
-//
     @Test
     @WithMockUser(value = "user@gmail.com")
     void updateComments() throws Exception {
@@ -139,18 +161,22 @@ class AdsControllerTest2 {
         Authentication auth = Mockito.mock(Authentication.class);
         String url = "/ads/{adPk}/comments/{id}";
         CommentDTO commentDTO = getCommentDTO();
+        CommentEntity commentEntity = commentMapper.toEntity(commentDTO);
         JSONObject commentDTOJSON = new JSONObject();
         commentDTOJSON.put("author", commentDTO.getAuthor());
         commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
         commentDTOJSON.put("pk", commentDTO.getPk());
         commentDTOJSON.put("text", commentDTO.getText());
-
+        when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntity()));
         when(adsService.updateComments(1,1, commentDTO, auth)).thenReturn(commentDTO);
+        when(commentRepository.findByIdAndAd_Id(1, 1)).thenReturn(Optional.of(getCommentEntity()));
+        when(userRepository.findById(1)).thenReturn(Optional.of(getNewAuthor()));
+        when(commentRepository.save(commentEntity)).thenReturn(commentEntity);
         mockMvc.perform(patch(url, 1, 1)
-                        .content(commentDTOJSON.toString())
+                        .content(String.valueOf(commentDTOJSON))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isOk());
 
     }
 
@@ -301,6 +327,11 @@ class AdsControllerTest2 {
 
     private ImageEntity getImageEntity() {
         return new ImageEntity(1, "path/to/image", getAdEntity());
+    }
+
+    private CommentEntity getCommentEntity() {
+        return new CommentEntity(1, getNewAuthor(), LocalDateTime.of(2023, 03,01,
+            10, 00, 00), getAdEntity(), "testText");
     }
 
 

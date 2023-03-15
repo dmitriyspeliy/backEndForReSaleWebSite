@@ -34,10 +34,7 @@ public class WebSecurityConfigTest {
 
   @Bean
   public InMemoryUserDetailsManager userDetailsService(PasswordEncoder passwordEncoder) {
-//    UserDetails user = User.withDefaultPasswordEncoder()
     UserDetails user = User.withUsername("user@gmail.com")
-//        .username("user@gmail.com")
-//        .password("password")
         .password(passwordEncoder.encode("password"))
         .roles("USER")
         .build();
