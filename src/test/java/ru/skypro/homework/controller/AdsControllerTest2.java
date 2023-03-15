@@ -160,13 +160,12 @@ class AdsControllerTest2 {
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         Authentication auth = Mockito.mock(Authentication.class);
         String url = "/ads/{id}";
-        AdsDTO adsDTO = getAdsDTO();
-        JSONObject adsDTOJSON =  new JSONObject();
-        adsDTOJSON.put("author", adsDTO.getAuthor());
-        adsDTOJSON.put("image", adsDTO.getImage());
-        adsDTOJSON.put("pk", adsDTO.getPk());
-        adsDTOJSON.put("price", adsDTO.getPrice());
-        adsDTOJSON.put("title", adsDTO.getTitle());
+        CreateAds createAds = getCreateAds();
+        JSONObject createAdsJSON =  new JSONObject();
+        createAdsJSON.put("description", createAds.getDescription());
+        createAdsJSON.put("price", createAds.getPrice());
+        createAdsJSON.put("title", createAds.getTitle());
+
 
         when(adsRepository.findById(any())).thenReturn(Optional.of(getAdEntity()));
 
@@ -179,7 +178,7 @@ class AdsControllerTest2 {
         when(adsService.updateAds(1, getCreateAds(), auth)).thenReturn(getAdsDTO());
 
         mockMvc.perform(patch(url, 1)
-                        .content(adsDTOJSON.toString())
+                        .content(createAdsJSON.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
