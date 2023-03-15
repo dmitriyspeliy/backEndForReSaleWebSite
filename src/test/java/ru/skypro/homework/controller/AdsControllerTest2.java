@@ -29,6 +29,7 @@ import ru.skypro.homework.entity.AdEntity;
 import ru.skypro.homework.entity.CommentEntity;
 import ru.skypro.homework.entity.ImageEntity;
 import ru.skypro.homework.entity.UserEntity;
+import ru.skypro.homework.exception.ElemNotFound;
 import ru.skypro.homework.mapper.AdsOtherMapper;
 import ru.skypro.homework.mapper.ImageMapper;
 import ru.skypro.homework.repository.AdsRepository;
@@ -132,7 +133,25 @@ class AdsControllerTest2 {
 //
 //
     @Test
-    void updateComments() {
+    @WithMockUser(value = "user@gmail.com")
+    void updateComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{adPk}/comments/{id}";
+        CommentDTO commentDTO = getCommentDTO();
+        JSONObject commentDTOJSON = new JSONObject();
+        commentDTOJSON.put("author", commentDTO.getAuthor());
+        commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
+        commentDTOJSON.put("pk", commentDTO.getPk());
+        commentDTOJSON.put("text", commentDTO.getText());
+
+        when(adsService.updateComments(1,1, commentDTO, auth)).thenReturn(commentDTO);
+        mockMvc.perform(patch(url, 1, 1)
+                        .content(commentDTOJSON.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
     }
 
     @Test
@@ -141,13 +160,13 @@ class AdsControllerTest2 {
         MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
         Authentication auth = Mockito.mock(Authentication.class);
         String url = "/ads/{id}";
-
-        CommentDTO commentDTO = getCommentDTO();
-        JSONObject commentDTOJSON =  new JSONObject();
-        commentDTOJSON.put("author", commentDTO.getAuthor());
-        commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
-        commentDTOJSON.put("pk", commentDTO.getPk());
-        commentDTOJSON.put("text", commentDTO.getText());
+        AdsDTO adsDTO = getAdsDTO();
+        JSONObject adsDTOJSON =  new JSONObject();
+        adsDTOJSON.put("author", adsDTO.getAuthor());
+        adsDTOJSON.put("image", adsDTO.getImage());
+        adsDTOJSON.put("pk", adsDTO.getPk());
+        adsDTOJSON.put("price", adsDTO.getPrice());
+        adsDTOJSON.put("title", adsDTO.getTitle());
 
         when(adsRepository.findById(any())).thenReturn(Optional.of(getAdEntity()));
 
@@ -160,7 +179,7 @@ class AdsControllerTest2 {
         when(adsService.updateAds(1, getCreateAds(), auth)).thenReturn(getAdsDTO());
 
         mockMvc.perform(patch(url, 1)
-                        .content(commentDTOJSON.toString())
+                        .content(adsDTOJSON.toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
