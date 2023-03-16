@@ -16,11 +16,13 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.assertj.core.api.Assertions;
@@ -31,7 +33,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -39,7 +40,6 @@ import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.web.multipart.MultipartFile;
 import ru.skypro.homework.dto.AdsDTO;
 import ru.skypro.homework.dto.CommentDTO;
 import ru.skypro.homework.dto.CreateAds;
@@ -55,11 +55,12 @@ import ru.skypro.homework.entity.ImageEntity;
 import ru.skypro.homework.entity.UserEntity;
 import ru.skypro.homework.exception.ElemNotFound;
 import ru.skypro.homework.mapper.AdMapper;
-import ru.skypro.homework.mapper.AdMapperImpl;
 import ru.skypro.homework.mapper.AdsOtherMapper;
+import ru.skypro.homework.mapper.AdsOtherMapperImpl;
 import ru.skypro.homework.mapper.CommentMapper;
 import ru.skypro.homework.mapper.ImageMapper;
 import ru.skypro.homework.mapper.UserMapper;
+import ru.skypro.homework.mapper.UserMapperImpl;
 import ru.skypro.homework.repository.AdsRepository;
 import ru.skypro.homework.repository.CommentRepository;
 import ru.skypro.homework.repository.ImageRepository;
@@ -92,7 +93,7 @@ class AdsServiceTest {
   private UserRepository userRepository;
 
   @Mock
-  private AdMapper adMapper = new AdMapperImpl();
+  private AdMapper adMapper;
   @Mock
   private CommentMapper commentMapper;
 
@@ -100,10 +101,11 @@ class AdsServiceTest {
   private ImageMapper imageMapper;
 
   @Mock
-  private UserMapper userMapper;
+  private UserMapper userMapper = new UserMapperImpl();
 
   @Mock
-  private AdsOtherMapper adsOtherMapper;
+  private AdsOtherMapper adsOtherMapper = new AdsOtherMapperImpl();
+
 
 
   private MockMultipartFile file;
@@ -352,7 +354,7 @@ class AdsServiceTest {
 //    assertThat(adsService.getAds()).isEqualTo(responseWrapperAds);
 //    verify(adsRepository,times(1)).findAll();
 //  }
-
+//
 //  @Test
 //  void getCommentsTest() {
 //    CommentEntity commentEntity = adCommentEntity(1);
@@ -414,8 +416,7 @@ class AdsServiceTest {
     commentEntity.setText("123456789");
     return commentEntity;
   }
-
-  private UserEntity getAuthor() {
+    private UserEntity getAuthor() {
     UserEntity author = new UserEntity();
     author.setImage("/users/author.1");
     author.setLastName("Иванов");
@@ -430,5 +431,193 @@ class AdsServiceTest {
     return author;
   }
 
+  @Test
+  void updateComments() {
+    int sourceCommentId = 2;
+    int sourceAdsId = 1;
+    CommentDTO sourceCommentDTO = getCommentDTOA();
+    CommentEntity commentEntity = getCommentEntityA();
+    Authentication authentication = getTestAuthentication();
+
+    lenient().when(securityService.isCommentUpdateAvailable(
+        any(Authentication.class),anyInt(),anyInt())).thenReturn(true);
+    lenient().when(commentRepository.findByIdAndAd_Id(sourceCommentId, sourceAdsId))
+        .thenReturn(Optional.of(getCommentEntityA()));
+    lenient().when(userRepository.findById(3)).thenReturn(Optional.of(getNewCommentAuthorA()));
+
+    commentEntity.setAuthor(getNewCommentAuthorA());
+    commentEntity.setText("Реклама");
+    commentEntity.setCreatedAt(LocalDateTime.of(2023, 02, 20, 10, 12,13));
+
+    lenient().when(commentRepository.save(commentEntity)).thenReturn(commentEntity);
+    lenient().when(adsService.updateComments(sourceAdsId, sourceCommentId, sourceCommentDTO, authentication)).thenReturn(getCommentDTOA());
+
+    CommentDTO excepted = adsService.updateComments(sourceAdsId, sourceCommentId, sourceCommentDTO, authentication);
+    CommentDTO actual = getCommentDTOA();
+
+    assertEquals(excepted,actual);
+  }
+
+  @Test
+  void updateCommentsNegativeNotFoundComment() {
+    Authentication authentication = getTestAuthentication();
+
+    lenient().when(commentRepository.findByIdAndAd_Id(anyInt(), anyInt()))
+        .thenReturn(Optional.of(getCommentEntityA()));
+    lenient().when(userRepository.findById(anyInt())).thenThrow(ElemNotFound.class);
+    lenient().when(securityService.isCommentUpdateAvailable(any(Authentication.class),
+        anyInt(), anyInt())).thenReturn(true);
+
+    assertThrows(ElemNotFound.class, () -> adsService.updateComments(1,1, getCommentDTOA(), authentication));
+  }
+
+  @Test
+  void updateCommentsNegativeNotFoundUser() {
+    UserEntity author = getAuthorA();
+    List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
+
+    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+    Authentication authentication = new TestingAuthenticationToken(author.getEmail(), author.getPassword(), authorities);
+    authentication.setAuthenticated(true);
+    lenient().when(commentRepository.findByIdAndAd_Id(anyInt(),anyInt())).thenThrow(ElemNotFound.class);
+    lenient().when(securityService.isAdmin(any(Authentication.class))).thenReturn(true);
+    assertThrows(ElemNotFound.class, () -> adsService.updateComments(1,1, getCommentDTOA(), authentication));
+  }
+
+  @Test
+  void updateAds() {
+    CreateAds sourceCreateAds = getCreateAdsA();
+    UserEntity author = getAuthorA();
+    List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
+
+    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+    Authentication authentication = new TestingAuthenticationToken(author.getEmail(), author.getPassword(), authorities);
+    authentication.setAuthenticated(true);
+    int sourceId = 1;
+    AdEntity adEntity = getResultAdEntityA();
+    lenient().when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntityA()));
+    lenient().when(adsRepository.save(adEntity)).thenReturn(adEntity);
+    lenient().when(securityService.isAdsUpdateAvailable(any(Authentication.class),anyInt())).thenReturn(true);
+    lenient().when(adsService.updateAds(sourceId, sourceCreateAds, authentication)).thenReturn(getResultAdsDTOA());
+    AdsDTO excepted = adsService.updateAds(sourceId, sourceCreateAds, authentication);
+    AdsDTO actual = getResultAdsDTOA();
+
+    assertEquals(excepted,actual);
+  }
+
+  @Test
+  void updateAdsNegativeTest() {
+    UserEntity author = getAuthorA();
+    List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
+
+    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+
+    Authentication authentication = new TestingAuthenticationToken(author.getEmail(), author.getPassword(), authorities);
+    lenient().when(adsRepository.findById(anyInt())).thenReturn(Optional.empty());
+    assertThrows(ElemNotFound.class, () -> adsService.updateAds(1, getCreateAdsA(),authentication));
+  }
+
+  private CreateAds getCreateAdsA() {
+    return new CreateAds("Описание", 99, "Заголовок");
+  }
+
+  private AdEntity getAdEntityA() {
+    AdEntity adEntity = new AdEntity();
+    adEntity.setId(1);
+
+    List<ImageEntity> imageEntities = new ArrayList<>();
+    imageEntities.add(new ImageEntity(1, "/ads/image/1", adEntity));
+
+    adEntity.setImageEntities(imageEntities);
+    adEntity.setTitle("Title");
+    adEntity.setDescription("Description");
+    adEntity.setCommentEntities(Collections.emptyList());
+    adEntity.setPrice(100);
+    adEntity.setAuthor(getAuthorA());
+
+    return adEntity;
+  }
+
+  private AdEntity getResultAdEntityA() {
+    AdEntity adEntity = new AdEntity();
+    adEntity.setId(1);
+
+    List<ImageEntity> imageEntities = new ArrayList<>();
+    imageEntities.add(new ImageEntity(1, "/ads/image/1", adEntity));
+
+    adEntity.setImageEntities(imageEntities);
+    adEntity.setTitle("Заголовок");
+    adEntity.setDescription("Описание");
+    adEntity.setCommentEntities(Collections.emptyList());
+    adEntity.setPrice(99);
+    adEntity.setAuthor(getAuthorA());
+
+    return adEntity;
+  }
+
+  private AdsDTO getResultAdsDTOA() {
+    AdsDTO adsDTO = new AdsDTO();
+    adsDTO.setPk(1);
+    adsDTO.setTitle("Заголовок");
+    adsDTO.setPrice(99);
+
+    List<String> images = new ArrayList<>();
+    images.add("/ads/image/1");
+
+    adsDTO.setImage("/ads/image/1");
+    adsDTO.setAuthor(2);
+    return adsDTO;
+  }
+
+  private UserEntity getAuthorA() {
+    UserEntity author = new UserEntity();
+    author.setImage("/users/author.png");
+    author.setLastName("Иванов");
+    author.setFirstName("Иван");
+    author.setCity("MSK");
+    author.setPhone("+79876543210");
+    author.setEmail("mail@mail.ru");
+    author.setRegDate(LocalDateTime.of(2023, 02, 20, 14, 20, 10));
+    author.setId(2);
+
+    return author;
+  }
+
+  private UserEntity getNewCommentAuthorA() {
+    UserEntity author = new UserEntity();
+    author.setImage("/users/authorComment.png");
+    author.setLastName("Иванов");
+    author.setFirstName("Иван");
+    author.setCity("MSK");
+    author.setPhone("+79876543210");
+    author.setEmail("mail@mail.ru");
+    author.setRegDate(LocalDateTime.of(2023, 02, 20, 14, 20, 10));
+    author.setId(3);
+
+    return author;
+  }
+
+  private CommentEntity getCommentEntityA() {
+    CommentEntity commentEntity = new CommentEntity();
+    commentEntity.setText("Text");
+    commentEntity.setCreatedAt(LocalDateTime.of(2023, 02, 22, 14, 20, 10));
+    commentEntity.setAuthor(getAuthorA());
+    commentEntity.setId(2);
+    commentEntity.setAd(getAdEntityA());
+
+    return commentEntity;
+  }
+
+  private CommentDTO getCommentDTOA() {
+    return new CommentDTO(3,"20-02-2023 10:12:13",2, "Реклама");
+  }
+
+  private Authentication getTestAuthentication() {
+    List<GrantedAuthority> authorities = new ArrayList<GrantedAuthority>();
+    UserEntity author = getAuthorA();
+    return new TestingAuthenticationToken(author.getEmail(), author.getPassword(), authorities);
+  }
 
 }
