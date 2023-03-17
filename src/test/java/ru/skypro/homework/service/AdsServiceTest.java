@@ -33,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -92,19 +93,19 @@ class AdsServiceTest {
   @Mock
   private UserRepository userRepository;
 
-  @Mock
+  @Spy
   private AdMapper adMapper;
-  @Mock
+  @Spy
   private CommentMapper commentMapper;
 
-  @Mock
+  @Spy
   private ImageMapper imageMapper;
 
-  @Mock
-  private UserMapper userMapper = new UserMapperImpl();
+  @Spy
+  private UserMapper userMapper;
 
-  @Mock
-  private AdsOtherMapper adsOtherMapper = new AdsOtherMapperImpl();
+  @Spy
+  private AdsOtherMapper adsOtherMapper;
 
 
 
@@ -340,29 +341,22 @@ class AdsServiceTest {
     verify(commentRepository, times(1)).findAllByAd_Id(any());
   }
 
-//  @Test
-//  void getAdsTest() {
-//    ResponseWrapperAds responseWrapperAds = new ResponseWrapperAds();
-//    List<AdEntity> adEntities = new ArrayList<>();
-//    adEntities.add(getAdEntity(1));
-//    adEntities.add(getAdEntity(2));
-//    Collection<AdsDTO> adsDTOS = adMapper.toDTOList(adEntities);
-//    responseWrapperAds.setResults(adsDTOS);
-//    responseWrapperAds.setCount(2);
-//    when(adsRepository.findAll()).thenReturn(adEntities);
-//    when(adsService.getAds()).thenReturn(responseWrapperAds);
-//    assertThat(adsService.getAds()).isEqualTo(responseWrapperAds);
-//    verify(adsRepository,times(1)).findAll();
-//  }
-//
-//  @Test
-//  void getCommentsTest() {
-//    CommentEntity commentEntity = adCommentEntity(1);
-//    CommentDTO commentDTO = new CommentDTO(1, "20-02-2023 14:20:10", 1, "123456789");
-//    when(commentRepository.findByIdAndAd_Id(1, 1)).thenReturn(Optional.of(commentEntity));
-//    assertThat(adsService.getComments(1, 1)).isEqualTo(commentDTO);
-//    verify(commentRepository,times(1)).findByIdAndAd_Id(any(),any());
-//  }
+  @Test
+  void getAdsTest() {
+    ResponseWrapperAds responseWrapperAds = getResponseWrapperAds();
+    when(adsRepository.findAll()).thenReturn(List.of(getAdEntityA()));
+    when(adMapper.toDTOList(List.of(getAdEntityA()))).thenReturn(List.of(getAdsDTO()));
+    assertThat(adsService.getAds()).isEqualTo(responseWrapperAds);
+  }
+
+  @Test
+  void getCommentsTest() {
+    CommentEntity commentEntity = adCommentEntity(1);
+    CommentDTO commentDTO = new CommentDTO(1, "20-02-2023 14:20:10", 1, "123456789");
+    when(commentRepository.findByIdAndAd_Id(1, 1)).thenReturn(Optional.of(commentEntity));
+    when(adsService.getComments(1,1)).thenReturn(commentDTO);
+    assertThat(adsService.getComments(1, 1)).isEqualTo(commentDTO);
+  }
 
   @Test
   void getAdByIdTest() {
@@ -391,45 +385,7 @@ class AdsServiceTest {
     assertThatExceptionOfType(ElemNotFound.class).isThrownBy(() -> adsService.getAdById(1,authentication));
   }
 
-  private AdEntity getAdEntity(int id) {
-    AdEntity adEntity = new AdEntity();
-    List<ImageEntity> imageEntities = new ArrayList<>();
-    ImageEntity imageEntity = new ImageEntity(id, "/path/to/image/1", new AdEntity());
 
-    imageEntities.add(imageEntity);
-
-    adEntity.setId(id);
-    adEntity.setTitle("afsdf");
-    adEntity.setPrice(123);
-    adEntity.setDescription("asfsdf");
-    adEntity.setAuthor(getAuthor());
-    adEntity.setImageEntities(imageEntities);
-    return adEntity;
-  }
-
-  private CommentEntity adCommentEntity(int id) {
-    CommentEntity commentEntity = new CommentEntity();
-    commentEntity.setId(id);
-    commentEntity.setAuthor(getAuthor());
-    commentEntity.setCreatedAt(LocalDateTime.of(2023, 02, 20, 14, 20, 10));
-    commentEntity.setAd(getAdEntity(1));
-    commentEntity.setText("123456789");
-    return commentEntity;
-  }
-    private UserEntity getAuthor() {
-    UserEntity author = new UserEntity();
-    author.setImage("/users/author.1");
-    author.setLastName("Иванов");
-    author.setFirstName("Иван");
-    author.setPassword("1111");
-    author.setCity("MSK");
-    author.setPhone("+79876543210");
-    author.setEmail("mail@mail.ru");
-    author.setRegDate(LocalDateTime.of(2023, 02, 20, 14, 20, 10));
-    author.setId(1);
-
-    return author;
-  }
 
   @Test
   void updateComments() {
@@ -619,5 +575,54 @@ class AdsServiceTest {
     UserEntity author = getAuthorA();
     return new TestingAuthenticationToken(author.getEmail(), author.getPassword(), authorities);
   }
+
+  private AdEntity getAdEntity(int id) {
+    AdEntity adEntity = new AdEntity();
+    List<ImageEntity> imageEntities = new ArrayList<>();
+    ImageEntity imageEntity = new ImageEntity(id, "/path/to/image/1", new AdEntity());
+
+    imageEntities.add(imageEntity);
+
+    adEntity.setId(id);
+    adEntity.setTitle("afsdf");
+    adEntity.setPrice(123);
+    adEntity.setDescription("asfsdf");
+    adEntity.setAuthor(getAuthor());
+    adEntity.setImageEntities(imageEntities);
+    return adEntity;
+  }
+
+  private CommentEntity adCommentEntity(int id) {
+    CommentEntity commentEntity = new CommentEntity();
+    commentEntity.setId(id);
+    commentEntity.setAuthor(getAuthor());
+    commentEntity.setCreatedAt(LocalDateTime.of(2023, 02, 20, 14, 20, 10));
+    commentEntity.setAd(getAdEntity(1));
+    commentEntity.setText("123456789");
+    return commentEntity;
+  }
+  private UserEntity getAuthor() {
+    UserEntity author = new UserEntity();
+    author.setImage("/users/author.1");
+    author.setLastName("Иванов");
+    author.setFirstName("Иван");
+    author.setPassword("1111");
+    author.setCity("MSK");
+    author.setPhone("+79876543210");
+    author.setEmail("mail@mail.ru");
+    author.setRegDate(LocalDateTime.of(2023, 02, 20, 14, 20, 10));
+    author.setId(1);
+
+    return author;
+  }
+
+  private ResponseWrapperAds getResponseWrapperAds() {
+    AdsDTO adsDTO = getAdsDTO();
+    return new ResponseWrapperAds(List.of(adsDTO).size(), List.of(adsDTO));
+  }
+  private AdsDTO getAdsDTO() {
+    return new AdsDTO(1, "path/to/image", 1, 100, "testTitle");
+  }
+
 
 }
