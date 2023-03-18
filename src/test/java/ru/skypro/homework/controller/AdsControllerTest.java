@@ -1,425 +1,338 @@
 package ru.skypro.homework.controller;
 
+import java.util.ArrayList;
 import net.minidev.json.JSONObject;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
-import ru.skypro.homework.dto.CommentDTO;
-import ru.skypro.homework.dto.ImageDTO;
-import ru.skypro.homework.dto.UserDTO;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+import ru.skypro.homework.WebSecurityConfigTest;
+import ru.skypro.homework.dto.*;
 import ru.skypro.homework.entity.AdEntity;
 import ru.skypro.homework.entity.CommentEntity;
 import ru.skypro.homework.entity.ImageEntity;
 import ru.skypro.homework.entity.UserEntity;
-import ru.skypro.homework.exception.ElemNotFound;
-import ru.skypro.homework.mapper.*;
+import ru.skypro.homework.mapper.AdsOtherMapper;
+import ru.skypro.homework.mapper.CommentMapper;
+import ru.skypro.homework.mapper.ImageMapper;
 import ru.skypro.homework.repository.AdsRepository;
 import ru.skypro.homework.repository.CommentRepository;
-import ru.skypro.homework.repository.ImageRepository;
 import ru.skypro.homework.repository.UserRepository;
-import ru.skypro.homework.service.UserService;
-import ru.skypro.homework.service.impl.AdsServiceImpl;
-import ru.skypro.homework.service.impl.SecurityService;
+import ru.skypro.homework.security.UserDetailServiceImpl;
+import ru.skypro.homework.service.AdsService;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@AutoConfigureMockMvc(addFilters = false)
 @WebMvcTest(AdsController.class)
+@Import(value = WebSecurityConfigTest.class)
 class AdsControllerTest {
 
-  private final Integer ONE = 1;
-  @Autowired
-  private MockMvc mockMvc;
-  @SpyBean
-  private CommentMapperImpl commentMapper;
-  @SpyBean
-  private AdMapperImpl adMapper;
-  @MockBean
-  private UserRepository userRepository;
-  @MockBean
-  private CommentRepository commentRepository;
-  @MockBean
-  private AdsRepository adsRepository;
-  @MockBean
-  private ImageMapper imageMapper;
-  @MockBean
-  private UserService userService;
-  @MockBean
-  private SecurityService securityService;
-  @MockBean
-  private UserMapper userMapper;
-  @MockBean
-  private AdsOtherMapper adsOtherMapper;
-  @MockBean
-  private ImageRepository imageRepository;
-  @SpyBean
-  private AdsServiceImpl adsService;
-  @InjectMocks
-  private AdsController adsController;
-  private MockMultipartFile image;
-  private MockMultipartFile properties;
-  private MockMultipartFile propertiesNonValid;
-  private MockMultipartFile authentication;
-  private JSONObject propertiesNonValidJS;
-  private JSONObject propertiesJS;
-  private JSONObject authenticationJS;
-  private JSONObject commentDTO;
-  private JSONObject commentDTONonValid;
-  private Integer price;
-  private String title;
-  private String email;
-  private String time;
+    @Autowired
+    private WebApplicationContext context;
+    @Autowired
+    private MockMvc mockMvc;
+    @InjectMocks
+    private AdsController adsController;
+    @MockBean
+    private AdsService adsService;
+    @MockBean
+    private UserDetailServiceImpl userDetailsService;
+    @MockBean
+    private AdsRepository adsRepository;
+    @MockBean
+    private AdsOtherMapper adsOtherMapper;
+    @MockBean
+    private ImageMapper imageMapper;
+    @MockBean
+    private CommentRepository commentRepository;
+    @MockBean
+    private UserRepository userRepository;
+    @MockBean
+    private CommentMapper commentMapper;
 
-  @BeforeEach
-  void init() {
-    time = "23-02-2022 08:09:10";
-    price = 11;
-    title = "заголовок";
-    email = "dmitr@gmail.com";
-    propertiesJS = new JSONObject();
-    propertiesJS.put("price", price);
-    propertiesJS.put("title", title);
-    authenticationJS = new JSONObject();
-    authenticationJS.put("email", email);
-    propertiesNonValidJS = new JSONObject();
-    propertiesNonValidJS.put("title", title);
-    propertiesNonValidJS.put("price", price - 100);
-    commentDTO = new JSONObject();
-    commentDTO.put("author", ONE);
-    commentDTO.put("createdAt", time);
-    commentDTO.put("pk", ONE);
-    commentDTO.put("text", title);
-    commentDTONonValid = new JSONObject();
-    commentDTONonValid.put("author", ONE);
-    commentDTONonValid.put("createdAt", time);
-    commentDTONonValid.put("pk", ONE - 100);
-    commentDTONonValid.put("text", title);
 
-    image = new MockMultipartFile(
-        "image",
-        "image.jpeg",
-        MediaType.MULTIPART_FORM_DATA_VALUE,
-        "image.jpeg".getBytes()
-    );
-    properties = new MockMultipartFile(
-        "properties",
-        "properties.json",
-        MediaType.APPLICATION_JSON_VALUE,
-        propertiesJS.toString().getBytes()
-    );
-    authentication = new MockMultipartFile(
-        "authentication",
-        "authentication.json",
-        MediaType.APPLICATION_JSON_VALUE,
-        authenticationJS.toString().getBytes()
-    );
-    propertiesNonValid = new MockMultipartFile(
-        "properties",
-        "propertiesNonValidJS.json",
-        MediaType.APPLICATION_JSON_VALUE,
-        propertiesNonValidJS.toString().getBytes()
-    );
-  }
 
-  @AfterEach
-  void clearAllTestData() {
-    price = null;
-    title = null;
-    email = null;
-    propertiesJS = null;
-    authenticationJS = null;
-    image = null;
-    authentication = null;
-    properties = null;
-  }
+    @Test
+    public void contextLoads() {
+        assertNotNull(adsController);
+    }
 
-  @Test
-  void updateComments() throws Exception {
-    int adPk = 3;
-    int id = 2;
-    String url = "/ads/" + adPk + "/comments/" + id;
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void createAds() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        MockMultipartFile image = new MockMultipartFile("image", "image.jpeg",
+            MediaType.IMAGE_JPEG_VALUE, "image.jpeg".getBytes());
+        String url = "/ads";
+        CreateAds createAds = getCreateAds();
+        JSONObject createAdsJSON =  new JSONObject();
+        createAdsJSON.put("description", createAds.getDescription());
+        createAdsJSON.put("price", createAds.getPrice());
+        createAdsJSON.put("title", createAds.getPrice());
+        MockMultipartFile json = new MockMultipartFile("createAds", "createAds",
+                MediaType.APPLICATION_JSON_VALUE, createAdsJSON.toString().getBytes());
+        when(adsService.addAds(getCreateAds(), image, auth)).thenReturn(getAdsDTO());
+        mockMvc.perform(multipart(url, HttpMethod.POST)
+                .file(image)
+                        .file(json))
+            .andDo(print())
+            .andExpect(status().isOk());
+    }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void addAdsComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        CommentDTO commentDTO = getCommentDTO();
+        JSONObject commentDTOJSON =  new JSONObject();
+        commentDTOJSON.put("author", commentDTO.getAuthor());
+        commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
+        commentDTOJSON.put("pk", commentDTO.getPk());
+        commentDTOJSON.put("text", commentDTO.getText());
+        when(adsService.addAdsComments(1,commentDTO, auth)).thenReturn(commentDTO);
+        when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntity()));
+        String url = "/ads/{ad_pk}/comments";
+        mockMvc.perform(post(url, 1)
+            .content(String.valueOf(commentDTOJSON))
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+                .accept(MediaType.APPLICATION_JSON))
+            .andDo(print())
+            .andExpect(status().isOk());
+    }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void deleteComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{adPk}/comments/{id}";
+        AdEntity adEntity = getAdEntity();
+        CommentEntity commentEntity = getCommentEntity();
+        when(adsRepository.findById(1)).thenReturn(Optional.of(adEntity));
+        when(commentRepository.findById(1)).thenReturn(Optional.of(commentEntity));
+        doNothing().when(adsService).deleteComments(1,1, auth);
+        mockMvc.perform(delete(url, 1,1))
+            .andDo(print())
+            .andExpect(status().isOk());
 
-    JSONObject commentObject = new JSONObject();
-    commentObject.put("author", 1);
-    commentObject.put("createdAt", "23-02-2022 08:09:10");
-    commentObject.put("pk", 2);
-    commentObject.put("text", "text");
+    }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void removeAds() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{id}";
+        AdEntity adEntity = getAdEntity();
+        when(adsRepository.findById(1)).thenReturn(Optional.of(adEntity));
+        doNothing().when(adsService).removeAds(1, auth);
+        mockMvc.perform(delete(url, 1))
+            .andDo(print())
+            .andExpect(status().isOk());
 
-    CommentEntity savedCommentEntity = getComment();
-    savedCommentEntity.setText("text");
-    savedCommentEntity.setAuthor(getNewAuthor());
-    savedCommentEntity.setCreatedAt(LocalDateTime.of(2022, 2, 23, 8, 9, 10));
-    savedCommentEntity.setId(2);
-    savedCommentEntity.setText("text");
-    when(commentRepository.findByIdAndAd_Id(id, adPk)).thenReturn(Optional.of(getComment()));
-    when(userRepository.findById(1)).thenReturn(Optional.of(getNewAuthor()));
-    when(commentRepository.save(savedCommentEntity)).thenReturn(savedCommentEntity);
-    when(securityService.isCommentUpdateAvailable(any(),any(),any())).thenReturn(true);
+    }
 
-    mockMvc.perform(MockMvcRequestBuilders.patch(
-                url)
-            .content(commentObject.toString())
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.author").value(1))
-        .andExpect(jsonPath("$.createdAt").value("23-02-2022 08:09:10"))
-        .andExpect(jsonPath("$.pk").value(2))
-        .andExpect(jsonPath("$.text").value("text"));
 
-  }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void updateComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{adPk}/comments/{id}";
+        CommentDTO commentDTO = getCommentDTO();
+        CommentEntity commentEntity = commentMapper.toEntity(commentDTO);
+        JSONObject commentDTOJSON = new JSONObject();
+        commentDTOJSON.put("author", commentDTO.getAuthor());
+        commentDTOJSON.put("createdAt", commentDTO.getCreatedAt());
+        commentDTOJSON.put("pk", commentDTO.getPk());
+        commentDTOJSON.put("text", commentDTO.getText());
+        when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntity()));
+        when(adsService.updateComments(1,1, commentDTO, auth)).thenReturn(commentDTO);
+        when(commentRepository.findByIdAndAd_Id(1, 1)).thenReturn(Optional.of(getCommentEntity()));
+        when(userRepository.findById(1)).thenReturn(Optional.of(getNewAuthor()));
+        when(commentRepository.save(commentEntity)).thenReturn(commentEntity);
+        mockMvc.perform(patch(url, 1, 1)
+                        .content(String.valueOf(commentDTOJSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
 
-  @Test
-  void updateCommentNotFoundComment() throws Exception {
-    int adPk = 3;
-    int id = 2;
-    String url = "/ads/" + adPk + "/comments/" + id;
+    }
 
-    JSONObject commentObject = new JSONObject();
-    commentObject.put("author", 1);
-    commentObject.put("createdAt", "23-02-2022 08:09:10");
-    commentObject.put("pk", 2);
-    commentObject.put("text", "text");
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void updateAds() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        String url = "/ads/{id}";
+        CreateAds createAds = getCreateAds();
+        JSONObject createAdsJSON =  new JSONObject();
+        createAdsJSON.put("description", createAds.getDescription());
+        createAdsJSON.put("price", createAds.getPrice());
+        createAdsJSON.put("title", createAds.getTitle());
 
-    when(securityService.isCommentUpdateAvailable(any(),any(),any())).thenReturn(true);
-    when(commentRepository.findByIdAndAd_Id(any(), any())).thenThrow(ElemNotFound.class);
 
-    mockMvc.perform(MockMvcRequestBuilders.patch(
-                url)
-            .content(commentObject.toString())
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isBadRequest());
-  }
+        when(adsRepository.findById(any())).thenReturn(Optional.of(getAdEntity()));
 
-  @Test
-  void updateCommentNotFoundAuthor() throws Exception {
-    int adPk = 3;
-    int id = 2;
-    String url = "/ads/" + adPk + "/comments/" + id;
+        AdEntity resultAdEntity = getAdEntity();
+        resultAdEntity.setPrice(99);
+        resultAdEntity.setDescription("описание");
+        resultAdEntity.setTitle("заголовок");
 
-    JSONObject commentObject = new JSONObject();
-    commentObject.put("author", 1);
-    commentObject.put("createdAt", "23-02-2022 08:09:10");
-    commentObject.put("pk", 2);
-    commentObject.put("text", "text");
+        when(adsRepository.save(resultAdEntity)).thenReturn(resultAdEntity);
+        when(adsService.updateAds(1, getCreateAds(), auth)).thenReturn(getAdsDTO());
 
-    when(commentRepository.findByIdAndAd_Id(any(), any())).thenReturn(Optional.of(getComment()));
-    when(securityService.isCommentUpdateAvailable(any(),any(),any())).thenReturn(true);
-    when(userRepository.findById(anyInt())).thenThrow(ElemNotFound.class);
+        mockMvc.perform(patch(url, 1)
+                        .content(createAdsJSON.toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk());
+    }
 
-    mockMvc.perform(MockMvcRequestBuilders.patch(
-                url)
-            .content(commentObject.toString())
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  void updateAds() throws Exception {
-    int id = 3;
-    String url = "/ads/" + id;
-
-    JSONObject CreateAdsObject = new JSONObject();
-    CreateAdsObject.put("description", "описание");
-    CreateAdsObject.put("price", 99);
-    CreateAdsObject.put("title", "заголовок");
-
-    when(adsRepository.findById(id)).thenReturn(Optional.of(getAdEntity()));
-
-    AdEntity resultAdEntity = getAdEntity();
-    resultAdEntity.setPrice(99);
-    resultAdEntity.setDescription("описание");
-    resultAdEntity.setTitle("заголовок");
-
-    when(adsRepository.save(resultAdEntity)).thenReturn(resultAdEntity);
-    when(securityService.isAdsUpdateAvailable(any(),any())).thenReturn(true);
-
-    mockMvc.perform(MockMvcRequestBuilders.patch(
-                url)
-            .content(CreateAdsObject.toString())
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.author").value(1))
-        .andExpect(jsonPath("$.image[0]").value(("/ads/image/1")))
-        .andExpect(jsonPath("$.image[1]").value(("/ads/image/2")))
-        .andExpect(jsonPath("$.pk").value(3))
-        .andExpect(jsonPath("$.title").value("заголовок"))
-        .andExpect(jsonPath("$.price").value(99));
-
-  }
-
-  @Test
-  void updateAdsNegative() throws Exception {
-    int id = 1;
-    String url = "/ads/" + id;
-
-    JSONObject CreateAdsObject = new JSONObject();
-    CreateAdsObject.put("description", "описание");
-    CreateAdsObject.put("price", 99);
-    CreateAdsObject.put("title", "заголовок");
-
-    when(adsRepository.findById(id)).thenThrow(ElemNotFound.class);
-
-    mockMvc.perform(MockMvcRequestBuilders.patch(
-                url)
-            .content(CreateAdsObject.toString())
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  void createAdsWithValidArg() throws Exception {
-    String url = "/ads";
-
-    when(imageMapper.toEntity(any(ImageDTO.class))).thenReturn(getImageEntity());
-
-    mockMvc.perform(multipart(url, HttpMethod.POST)
-            .file(image)
-            .file(properties)
-            .file(authentication)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(
-            jsonPath("$.image[0]").value((Base64.getEncoder().encodeToString(image.getBytes()))))
-        .andExpect(jsonPath("$.title").value(title))
-        .andExpect(jsonPath("$.price").value(price))
-        .andExpect(status().isOk());
-  }
-
-  @Test
-  void createAdsWithNonValidArg() throws Exception {
-    String url = "/ads";
-
-    when(imageMapper.toEntity(any(ImageDTO.class))).thenReturn(getImageEntity());
-
-    mockMvc.perform(multipart(url, HttpMethod.POST)
-            .file(image)
-            .file(propertiesNonValid)
-            .file(authentication)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isBadRequest());
-  }
-
-  @Test
-  void addAdsCommentsWithValidArg() throws Exception {
-    String ad_pk = "1";
-    String url = "/ads/" + ad_pk + "/comments";
-
-    when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntity()));
-
-    mockMvc.perform(multipart(url, HttpMethod.POST)
-            .file(authentication)
-            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
-            .content(String.valueOf(commentDTO))
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void getAdsMe() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        Authentication auth = Mockito.mock(Authentication.class);
+        when(adsService.getAdsMe(auth)).thenReturn(getResponseWrapperAds());
+        String url = "/ads/me";
+        mockMvc.perform(get(url)
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
+    }
 
-  }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void getAdsById() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getAdById(1, auth)).thenReturn(getFullAds());
+        String url = "/ads/{id}";
+        mockMvc.perform(get(url, 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk());
+    }
 
-  @Test
-  void addAdsCommentsWithNoValidArgs() throws Exception {
-    String ad_pk = "1";
-    String url = "/ads/" + ad_pk + "/comments";
-
-    when(adsRepository.findById(anyInt())).thenReturn(Optional.of(getAdEntity()));
-
-    mockMvc.perform(multipart(url, HttpMethod.POST)
-            .file(authentication)
-            .contentType(MediaType.MULTIPART_FORM_DATA_VALUE)
-            .content(String.valueOf(commentDTONonValid))
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isBadRequest());
-
-  }
-
-  @Test
-  void getAdsMe() throws Exception {
-    String url = "/ads/me";
-
-    mockMvc.perform(get(url)
-            .content(authenticationJS.toString())
-            .contentType(MediaType.APPLICATION_JSON)
-            .accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isOk());
-
-  }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void getAds() throws Exception {
+        Authentication auth = Mockito.mock(Authentication.class);
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getAds()).thenReturn(getResponseWrapperAds());
+        String url = "/ads";
+        mockMvc.perform(get(url)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+            .andDo(print())
+            .andExpect(status().isOk());
+    }
 
 
-  private CommentEntity getComment() {
-    CommentEntity comment = new CommentEntity();
-    comment.setId(2);
-    comment.setAd(getAdEntity());
-    comment.setAuthor(getCurrentAuthor());
-    comment.setCreatedAt(LocalDateTime.of(2023, 02, 10, 10, 10, 10));
-    comment.setText("текст");
-    return comment;
-  }
 
-  private AdEntity getAdEntity() {
-    AdEntity adEntity = new AdEntity();
-    adEntity.setId(3);
-    adEntity.setAuthor(getNewAuthor());
-    List<ImageEntity> imageEntityList = new ArrayList<>();
-    imageEntityList.add(new ImageEntity(1, "/ads/image/1", adEntity));
-    imageEntityList.add(new ImageEntity(2, "/ads/image/2", adEntity));
-    adEntity.setImageEntities(imageEntityList);
-    return adEntity;
-  }
+    @Test
+    @WithMockUser(value = "user@gmail.com")
+    void getAdsComments() throws Exception {
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getAdsComments(1)).thenReturn(getResponseWrapperComment());
+        String url = "/ads/{ad_pk}/comments";
+        mockMvc.perform(get(url, 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andDo(print())
+                .andExpect(status().isOk());
+    }
 
-  private UserEntity getCurrentAuthor() {
-    UserEntity userEntity = new UserEntity();
-    userEntity.setId(5);
-    return userEntity;
-  }
+    @Test
+    void getComments() throws Exception {
+        String url = "/ads/{ad_pk}/comments/{id}";
+        MockMvc mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
+        when(adsService.getComments(1, 1)).thenReturn(getCommentDTO());
+        mockMvc.perform(get(url, 1, 1)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON))
+            .andDo(print())
+            .andExpect(status().isOk());
+    }
 
-  private UserEntity getNewAuthor() {
-    UserEntity userEntity = new UserEntity();
-    userEntity.setId(1);
-    return userEntity;
-  }
+    private FullAds getFullAds() {
+        return new FullAds("testName", "testLastName", "testDescription",
+                "email@mail.ru", List.of("path/to/image"), "+79998887766",
+                1, 100, "testTitle");
+    }
 
-  private ImageEntity getImageEntity() {
-    return new ImageEntity(1, "path/to/image", getAdEntity());
-  }
+    private ResponseWrapperAds getResponseWrapperAds() {
+        AdsDTO adsDTO = getAdsDTO();
+        return new ResponseWrapperAds(List.of(adsDTO).size(), List.of(adsDTO));
+    }
 
-  private UserDTO getUserDTO() {
-    return new UserDTO("dmitry@gmail.com"
-        , "Dmitry", 1, "Pospelov"
-        , "89299129121", "20-02-2023 10:12:13", "Moscow", "Реклама");
-  }
+    private AdsDTO getAdsDTO() {
+        return new AdsDTO(1, "path/to/image", 1, 100, "testTitle");
+    }
 
-  private CommentDTO getCommentDTO() {
-    return new CommentDTO(getNewAuthor().getId(), "20-02-2023 10:12:13", getAdEntity().getId(),
-        "testText");
+    private ResponseWrapperComment getResponseWrapperComment() {
+        CommentDTO commentDTO = getCommentDTO();
+        return new ResponseWrapperComment(List.of(commentDTO).size(), List.of(commentDTO));
+    }
 
-  }
+    private CommentDTO getCommentDTO() {
+        return new CommentDTO(1, LocalDateTime.of(2023, 03,01,
+            10, 00, 00).toString(), 1, "testText");
+    }
+
+    private CreateAds getCreateAds() {
+        return new CreateAds("testDescription", 100, "testTitle");
+    }
+
+    private AdEntity getAdEntity() {
+        AdEntity adEntity = new AdEntity();
+        adEntity.setId(3);
+        adEntity.setAuthor(getNewAuthor());
+        List<ImageEntity> imageEntityList = new ArrayList<>();
+        imageEntityList.add(new ImageEntity(1, "/ads/image/1", adEntity));
+        imageEntityList.add(new ImageEntity(2, "/ads/image/2", adEntity));
+        adEntity.setImageEntities(imageEntityList);
+        return adEntity;
+    }
+
+    private UserEntity getNewAuthor() {
+        UserEntity userEntity = new UserEntity();
+        userEntity.setId(1);
+        return userEntity;
+    }
+
+    private ImageEntity getImageEntity() {
+        return new ImageEntity(1, "path/to/image", getAdEntity());
+    }
+
+    private CommentEntity getCommentEntity() {
+        return new CommentEntity(1, getNewAuthor(), LocalDateTime.of(2023, 03,01,
+            10, 00, 00), getAdEntity(), "testText");
+    }
+
 
 }
