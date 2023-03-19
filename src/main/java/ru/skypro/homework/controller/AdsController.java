@@ -95,7 +95,7 @@ public class AdsController {
   @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<AdsDTO> createAds(
       @RequestPart("image") MultipartFile file,
-      @RequestPart @Valid CreateAds createAds,
+      @RequestPart("properties") @Valid CreateAds createAds,
       Authentication authentication) throws IOException {
     return ResponseEntity.ok(adsService.addAds(createAds, file, authentication));
   }

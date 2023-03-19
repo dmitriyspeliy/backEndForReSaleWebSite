@@ -92,7 +92,7 @@ class AdsControllerTest {
         createAdsJSON.put("description", createAds.getDescription());
         createAdsJSON.put("price", createAds.getPrice());
         createAdsJSON.put("title", createAds.getPrice());
-        MockMultipartFile json = new MockMultipartFile("createAds", "createAds",
+        MockMultipartFile json = new MockMultipartFile("properties", "properties",
                 MediaType.APPLICATION_JSON_VALUE, createAdsJSON.toString().getBytes());
         when(adsService.addAds(getCreateAds(), image, auth)).thenReturn(getAdsDTO());
         mockMvc.perform(multipart(url, HttpMethod.POST)
